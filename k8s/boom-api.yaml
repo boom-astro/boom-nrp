@@ -1,0 +1,113 @@
+##############################################
+# BOOM API — Deployment + Service + Ingress
+##############################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boom-api
+  namespace: umn-babamul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: boom-api
+  template:
+    metadata:
+      labels:
+        app: boom-api
+    spec:
+      containers:
+        - name: boom-api
+          image: ghcr.io/keshavmajithia/boom:latest
+          command: ["/app/boom-api"]
+          ports:
+            - containerPort: 4000
+          env:
+            - name: BOOM_DATABASE__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: boom-secrets
+                  key: BOOM_DATABASE__PASSWORD
+            - name: BOOM_API__AUTH__SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: boom-secrets
+                  key: BOOM_API__AUTH__SECRET_KEY
+            - name: BOOM_API__AUTH__ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: boom-secrets
+                  key: BOOM_API__AUTH__ADMIN_PASSWORD
+            - name: BOOM_DATABASE__HOST
+              value: "mongo"
+            - name: BOOM_DATABASE__USERNAME
+              value: "mongoadmin"
+            - name: BOOM_REDIS__HOST
+              value: "valkey"
+            - name: BOOM_API__PORT
+              value: "4000"
+            - name: BOOM_BABAMUL__ENABLED
+              value: "false"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+          volumeMounts:
+            - name: boom-config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          readinessProbe:
+            tcpSocket:
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: boom-config
+          configMap:
+            name: boom-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boom-api
+  namespace: umn-babamul
+spec:
+  selector:
+    app: boom-api
+  ports:
+    - port: 4000
+      targetPort: 4000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: boom-api-ingress
+  namespace: umn-babamul
+  annotations:
+    kubernetes.io/ingress.class: "haproxy"
+spec:
+  rules:
+    - host: boom-api.nrp-nautilus.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: boom-api
+                port:
+                  number: 4000
+  tls:
+    - hosts:
+        - boom-api.nrp-nautilus.io

@@ -1,0 +1,159 @@
+##############################################
+# ZTF Ingestion Job - April 8, 2026
+##############################################
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ztf-ingest-20260408
+  namespace: umn-babamul
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      initContainers:
+      - name: create-topic
+        image: apache/kafka:4.1.1
+        command:
+        - bash
+        - -c
+        - |
+          TOPIC="ztf_20260408_programid1"
+          BROKER="broker:29092"
+          PARTITIONS=15
+
+          echo "==> Waiting for Kafka broker to be reachable..."
+          until /opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server $BROKER >/dev/null 2>&1; do
+            echo "Broker not ready, retrying in 3s..."
+            sleep 3
+          done
+          echo "==> Broker is reachable."
+
+          echo "==> Deleting topic $TOPIC if it exists..."
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BROKER --delete --topic $TOPIC --if-exists 2>/dev/null || true
+          sleep 5
+
+          echo "==> Creating topic $TOPIC with $PARTITIONS partitions..."
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BROKER \
+            --create --topic $TOPIC \
+            --partitions $PARTITIONS \
+            --replication-factor 1
+
+          echo "==> Waiting for all $PARTITIONS partitions to have a leader..."
+          for i in $(seq 1 60); do
+            READY=$(/opt/kafka/bin/kafka-topics.sh --bootstrap-server $BROKER --describe --topic $TOPIC 2>/dev/null | grep -c "Leader: 1")
+            if [ "$READY" -ge "$PARTITIONS" ]; then
+              echo "==> All $PARTITIONS partitions are ready."
+              exit 0
+            fi
+            echo "Only $READY/$PARTITIONS partitions ready, waiting... (attempt $i/60)"
+            sleep 2
+          done
+          echo "ERROR: Timed out waiting for partitions."
+          exit 1
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+      containers:
+      - name: producer
+        image: ghcr.io/keshavmajithia/boom:latest
+        command: ["/app/kafka_producer"]
+        args: ["ztf", "20260408", "public", "--server-url", "broker:29092"]
+        resources:
+          requests:
+            cpu: "1"
+            memory: "4Gi"
+          limits:
+            cpu: "2"
+            memory: "8Gi"
+        volumeMounts:
+        - name: temp-storage
+          mountPath: /data
+        workingDir: /data
+      restartPolicy: Never
+      volumes:
+      - name: temp-storage
+        emptyDir: {}
+---
+##############################################
+# ZTF Ingestion Job - April 9, 2026
+##############################################
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ztf-ingest-20260409
+  namespace: umn-babamul
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      initContainers:
+      - name: create-topic
+        image: apache/kafka:4.1.1
+        command:
+        - bash
+        - -c
+        - |
+          TOPIC="ztf_20260409_programid1"
+          BROKER="broker:29092"
+          PARTITIONS=15
+
+          echo "==> Waiting for Kafka broker to be reachable..."
+          until /opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server $BROKER >/dev/null 2>&1; do
+            echo "Broker not ready, retrying in 3s..."
+            sleep 3
+          done
+          echo "==> Broker is reachable."
+
+          echo "==> Deleting topic $TOPIC if it exists..."
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BROKER --delete --topic $TOPIC --if-exists 2>/dev/null || true
+          sleep 5
+
+          echo "==> Creating topic $TOPIC with $PARTITIONS partitions..."
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BROKER \
+            --create --topic $TOPIC \
+            --partitions $PARTITIONS \
+            --replication-factor 1
+
+          echo "==> Waiting for all $PARTITIONS partitions to have a leader..."
+          for i in $(seq 1 60); do
+            READY=$(/opt/kafka/bin/kafka-topics.sh --bootstrap-server $BROKER --describe --topic $TOPIC 2>/dev/null | grep -c "Leader: 1")
+            if [ "$READY" -ge "$PARTITIONS" ]; then
+              echo "==> All $PARTITIONS partitions are ready."
+              exit 0
+            fi
+            echo "Only $READY/$PARTITIONS partitions ready, waiting... (attempt $i/60)"
+            sleep 2
+          done
+          echo "ERROR: Timed out waiting for partitions."
+          exit 1
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+      containers:
+      - name: producer
+        image: ghcr.io/keshavmajithia/boom:latest
+        command: ["/app/kafka_producer"]
+        args: ["ztf", "20260409", "public", "--server-url", "broker:29092"]
+        resources:
+          requests:
+            cpu: "1"
+            memory: "4Gi"
+          limits:
+            cpu: "2"
+            memory: "8Gi"
+        volumeMounts:
+        - name: temp-storage
+          mountPath: /data
+        workingDir: /data
+      restartPolicy: Never
+      volumes:
+      - name: temp-storage
+        emptyDir: {}

@@ -1,0 +1,141 @@
+##############################################
+# MongoDB Exporter
+##############################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-exporter
+  namespace: umn-babamul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-exporter
+  template:
+    metadata:
+      labels:
+        app: mongodb-exporter
+    spec:
+      containers:
+        - name: mongodb-exporter
+          image: percona/mongodb_exporter:0.44.0
+          ports:
+            - containerPort: 9216
+          env:
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: boom-secrets
+                  key: BOOM_DATABASE__PASSWORD
+            - name: MONGODB_URI
+              value: "mongodb://mongoadmin:$(MONGO_PASSWORD)@mongo:27017/admin"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-exporter
+  namespace: umn-babamul
+spec:
+  selector:
+    app: mongodb-exporter
+  ports:
+    - port: 9216
+      targetPort: 9216
+---
+##############################################
+# Valkey (Redis) Exporter
+##############################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey-exporter
+  namespace: umn-babamul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey-exporter
+  template:
+    metadata:
+      labels:
+        app: valkey-exporter
+    spec:
+      containers:
+        - name: valkey-exporter
+          image: oliver006/redis_exporter:v1.67.0
+          ports:
+            - containerPort: 9121
+          env:
+            - name: REDIS_ADDR
+              value: "valkey:6379"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey-exporter
+  namespace: umn-babamul
+spec:
+  selector:
+    app: valkey-exporter
+  ports:
+    - port: 9121
+      targetPort: 9121
+---
+##############################################
+# Kafka Exporter
+##############################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-exporter
+  namespace: umn-babamul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-exporter
+  template:
+    metadata:
+      labels:
+        app: kafka-exporter
+    spec:
+      containers:
+        - name: kafka-exporter
+          image: danielqsj/kafka-exporter:v1.9.0
+          ports:
+            - containerPort: 9308
+          args:
+            - --kafka.server=broker:29092
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-exporter
+  namespace: umn-babamul
+spec:
+  selector:
+    app: kafka-exporter
+  ports:
+    - port: 9308
+      targetPort: 9308

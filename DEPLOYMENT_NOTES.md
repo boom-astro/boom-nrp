@@ -9,9 +9,9 @@ The default storage on NRP is CephFS (`rook-cephfs-east`). While reliable, CephF
 - The BOOM Kafka setup uses **15 partitions** per topic.
 - Creating 15 partitions requires the broker to create 15 directories and ~45 index files simultaneously.
 - On CephFS, this process takes **8-12 seconds**.
-- The BOOM Rust producer has a hardcoded **5-second message timeout** (`message.timeout.ms: "5000"`).
+- The BOOM Rust producer has a default **5-second message timeout** (`message.timeout.ms: "5000"`).
 
-**Result:** The producer triggers auto-creation of a topic and immediately tries to send data. Because CephFS hasn't finished creating the partitions within 5 seconds, the producer errors out and the ingestion fails.
+**Result:** The producer triggers auto-creation of a topic and immediately tries to send data. Because CephFS hasn't finished creating the partitions within 5 seconds, the producer hits its delivery deadline and errors out, failing the ingestion. The timeout error is ultimately a side-effect of the slow metadata operations on CephFS. (Note: Increasing the timeout config is not recommended as it simply hides the root cause of the latency).
 
 ### The Solution: Fast Ephemeral Storage
 We moved the Kafka data volume in `k8s/kafka.yaml` from a PersistentVolumeClaim (CephFS) to an **`emptyDir`** (local node NVMe).

@@ -19,7 +19,7 @@ spec:
       containers:
         - name: consumer-ztf
           image: ghcr.io/keshavmajithia/boom:latest
-          command: ["/app/kafka_consumer", "ztf"]
+          command: ["/app/kafka_consumer", "ztf", "--topics-override", "ztf_20260408_programid1"]
           env:
             - name: BOOM_DATABASE__PASSWORD
               valueFrom:

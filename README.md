@@ -1,6 +1,6 @@
 # BOOM on NRP Nautilus
 
-This repository contains the Kubernetes deployment manifests and technical documentation for running the BOOM (Broker for Objects with Observational Models) microservice stack on the [NRP Nautilus](https://nrp-nautilus.io/) cluster.
+This repository contains the Kubernetes deployment manifests and technical documentation for running the BOOM (Burst & Outburst Observations Monitor) microservice stack on the [NRP Nautilus](https://nrp-nautilus.io/) cluster.
 
 ## Deployment Overview
 
